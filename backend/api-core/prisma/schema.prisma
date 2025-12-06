@@ -1,0 +1,100 @@
+// Đây là file cấu hình Database chuẩn doanh nghiệp
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Bảng Người dùng (Nhân viên, Khách hàng, Admin)
+model User {
+  id        String   @id @default(uuid()) // Dùng UUID cho bảo mật, không dùng số 1,2,3
+  email     String   @unique
+  password  String
+  fullName  String?
+  phone     String?
+  role      Role     @default(AGENT) // Phân quyền: Admin, Agent (Môi giới), Customer
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Quan hệ: Một môi giới bán nhiều nhà
+  properties Property[]
+  
+  // Quan hệ: Một người có thể gửi nhiều yêu cầu tư vấn
+  leads      Lead[]
+}
+
+// 2. Bảng Bất động sản (Sản phẩm chính)
+model Property {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  address     String
+  price       Decimal        @db.Decimal(15, 2) // Tiền tỷ nên cần số lớn
+  area        Float          // Diện tích (m2)
+  type        PropertyType   // Chung cư, Nhà đất, Đất nền...
+  status      PropertyStatus @default(AVAILABLE)
+  contactPhone String? 
+  
+  // Quan hệ: Nhà này do ai đăng bán?
+  agentId     String
+  agent       User           @relation(fields: [agentId], references: [id])
+
+  images      PropertyImage[]
+  leads       Lead[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+// 3. Bảng Hình ảnh Bất động sản
+model PropertyImage {
+  id         String   @id @default(uuid())
+  url        String
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+// 4. Bảng Khách hàng tiềm năng (Leads - Ai quan tâm nhà nào)
+model Lead {
+  id         String   @id @default(uuid())
+  message    String?
+  status     LeadStatus @default(NEW)
+  
+  userId     String?  // Nếu khách đã có tài khoản
+  user       User?    @relation(fields: [userId], references: [id])
+  
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  createdAt  DateTime @default(now())
+}
+
+// --- CÁC DANH MỤC CỐ ĐỊNH (ENUM) ---
+
+enum Role {
+  ADMIN
+  AGENT
+  CUSTOMER
+}
+
+enum PropertyType {
+  APARTMENT   // Chung cư
+  HOUSE       // Nhà riêng
+  LAND        // Đất nền
+  COMMERCIAL  // Văn phòng/Kiot
+}
+
+enum PropertyStatus {
+  AVAILABLE   // Đang bán
+  SOLD        // Đã bán
+  RENTED      // Đã cho thuê
+}
+
+enum LeadStatus {
+  NEW         // Mới
+  CONTACTED   // Đã gọi
+  CLOSED      // Chốt đơn
+}

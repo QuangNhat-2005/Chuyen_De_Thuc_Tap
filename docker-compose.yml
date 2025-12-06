@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # 1. Database chính (PostgreSQL)
+  postgres:
+    image: postgres:16-alpine
+    container_name: estate_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_123
+      POSTGRES_DB: estate_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Giao diện quản lý DB (pgAdmin) - Để xem dữ liệu bằng mắt thường
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: estate_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@estate.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  # 3. Cache (Redis) - Để hệ thống chạy nhanh như gió
+  redis:
+    image: redis:alpine
+    container_name: estate_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
